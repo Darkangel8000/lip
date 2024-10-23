@@ -1,0 +1,4 @@
+(executable
+ (public_name helloworl)
+ (name main)
+ (libraries helloworl))
