@@ -44,6 +44,7 @@ open Ast
 %left LCPAREN
 %left RCPAREN
 
+
 /* a && b && c */
 
 %%
@@ -69,12 +70,7 @@ expr:
 ;
 
 decl:
-  | INTVAR v=VAR { IntVar(v) }
-;
-
-decls:
-  | d=decl { [d] }
-  | d1=decl SEQ dl=decls { d1 :: dl }
+  | INTVAR v=VAR SEQ { IntVar(v) }
 ;
 
 cmd:
@@ -85,5 +81,5 @@ cmd:
   | c1=cmd SEQ c2=cmd { Seq(c1, c2) }
   | WHILE e=expr DO c=cmd { While(e, c) }
   | LCPAREN c=cmd RCPAREN { Decl([], c) }
-  | LCPAREN dl=decls SEQ2 c=cmd RCPAREN { Decl(dl, Block(c)) }
+  | LCPAREN dl=list(decl) c=cmd RCPAREN { Decl(dl, c) }
 ;

@@ -3,37 +3,6 @@ open Ast
 
 (*funzione che valuta se è un numero naturale*)
 
-let rec string_of_expr = function
-    True -> "True"
-  | False -> "False"
-  | Const n -> "Const(" ^ (string_of_int n) ^ ")"
-  | Var x -> "Var(" ^ x ^ ")"
-  | And(e1,e2) -> "And(" ^ (string_of_expr e1) ^ "," ^ (string_of_expr e2) ^ ")"
-  | Or(e1,e2) -> "Or(" ^ (string_of_expr e1) ^ "," ^ (string_of_expr e2) ^ ")"
-  | Not e0 -> "Not(" ^ (string_of_expr e0) ^ ")"
-  | Add(e1,e2) -> "Add(" ^ (string_of_expr e1) ^ "," ^ (string_of_expr e2) ^ ")"
-  | Sub(e1,e2) -> "Sub(" ^ (string_of_expr e1) ^ "," ^ (string_of_expr e2) ^ ")"
-  | Mul(e1,e2) -> "Mul(" ^ (string_of_expr e1) ^ "," ^ (string_of_expr e2) ^ ")"
-  | Eq(e1,e2) -> "Eq(" ^ (string_of_expr e1) ^ "," ^ (string_of_expr e2) ^ ")"
-  | Leq(e1,e2) -> "Leq(" ^ (string_of_expr e1) ^ "," ^ (string_of_expr e2) ^ ")"
-;;
-
-let string_of_decl decl_list = 
-  List.fold_left(fun acc decl -> 
-    match decl with
-      IntVar s
-    | BoolVar s -> acc ^ s ^ ","
-    ) "" decl_list
-
-let rec string_of_cmd = function
-  Skip -> "Skip"
-  | Assign(e1, e2) -> "Assign(" ^ e1 ^ (string_of_expr e2) ^ ")"
-  | Seq(c1, c2) -> "Seq(" ^ (string_of_cmd c1) ^ (string_of_cmd c2) ^ ")"
-  | If(e1, c1, c2) -> "If(" ^ (string_of_expr e1) ^ "," ^ (string_of_cmd c1) ^ "," ^ (string_of_cmd c2) ^ ")"
-  | While (e1, c1) -> "While(" ^ (string_of_expr e1) ^ "," ^ (string_of_cmd c1) ^ ")"
-  | Decl(d1, c1) -> "Decl(" ^ (string_of_decl d1) ^ "," ^ (string_of_cmd c1) ^ ")"
-  | Block c1 -> "Block(" ^ (string_of_cmd c1) ^ ")"
-
 
 let parse (s : string) : cmd =
   let lexbuf = Lexing.from_string s in
@@ -134,13 +103,8 @@ let eval_decl (state : state) (decl_list : decl list) : state =
       match d with 
         IntVar ide -> l + 1, (bind_env e ide (IVar l)) (* mettendo l partiamo da 0 fino a lunghezza(decl_list) *)
         | BoolVar ide -> l + 1, (bind_env e ide (BVar l)) 
-        (* data la dichiarazione gli associa una nuova locazione e 
-          con bind_env associa un ide ad un env, estendendo l'env precedente,
-          ad esempio: int x; int y; int z; al primo passo l'env è vuoto, quindi l'env diventa x -> 0(locazione)
-          al secondo passo l'env diventa x -> 0, y -> 1
-        *)
     ) (loc, env) decl_list in 
-    make_state (new_env :: getenv state) (getmem state) new_loc
+    make_state ((new_env :: getenv state)) (getmem state) new_loc
   
 (* vedere cosa fa d *)
 let rec trace1 = function
@@ -151,18 +115,18 @@ let rec trace1 = function
       ( 
         (* valuto il valore di e *)
         let v = eval_expr st e in
-          (* opttengo l'ultimo enviroment dalla lista di enviroment *)
           let top_env = (topenv st) in
+          (* opttengo l'ultimo enviroment dalla lista di enviroment *)
             (* ottengo la locazione di memoria del identificatore x *)
             match (top_env x) with
-              BVar loc  
+              BVar loc -> St (setmem st (bind_mem (getmem st) loc v))
+              | IVar loc -> St (setmem st (bind_mem (getmem st) loc v))) 
               (* 
                 1) ottengo la memoria dallo stato
                 2) aggiorno la memoria con il nuovo valore
                 3) aggiorno lo stato con la nuova memoria
                 4) restituisco lo stato aggiornato
               *)
-            | IVar loc -> St (setmem st (bind_mem (getmem st) loc v))) 
     | Seq(c1, c2) ->
         (
           let conf' = trace1 (Cmd(c1, st)) in (* esecuzione primo comando della sequenza -> cmd1;cmd2 *)
@@ -177,8 +141,7 @@ let rec trace1 = function
             then Cmd(c1, st) (* se b == true  valuta il primo comando  *)
             else Cmd(c2, st) (* se b == false valuta il secondo comando *)
           )
-          | _ -> raise (TypeError "Expected a boolean value")
-          
+          | _ -> raise (TypeError "Expected a boolean value") 
         )
     | While(e, c1) -> 
         (match (eval_expr st e) with
@@ -191,12 +154,12 @@ let rec trace1 = function
         )
     | Decl(dec_list, cmd) -> 
       let st' = (eval_decl st dec_list) in
-        Cmd(cmd, st')
-    | Block cmd -> 
-      let result = (Cmd(cmd, st)) in
+        Cmd(Block(cmd), st')
+    | Block cmd ->
+      let result = trace1 (Cmd(cmd, st)) in
         match result with
-        Cmd(c, st') -> Cmd(c, setenv st' (popenv st))
-      | St s -> St (setenv s (popenv s))
+        Cmd(c, st') -> Cmd(Block(c), st')
+      | St s -> St (make_state (popenv s) (getmem s) (getloc s))
     )
   | St _ -> raise NoRuleApplies
 
@@ -208,12 +171,13 @@ let rec create_list n_steps acc f conf =
       try let conf' = f conf in (* se restituisce una configurazione va avanti nella creazione della lista *)
         create_list (n_steps - 1) (conf' :: acc) f conf'
       with _ -> List.rev acc (* se da un eccezzione allora si ferma perché il cmd non si può ridurre ulteriormente *)
- 
+      
 let trace n_steps cmd = 
   (* cmd -> è il comando di partenza 
      bottom -> è lo stato 0 quello di partenza quindi senza valore *)
   let conf' = Cmd(cmd, state0) in
     create_list n_steps [] trace1 conf'
+  
 
       
 

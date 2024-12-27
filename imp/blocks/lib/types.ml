@@ -46,8 +46,7 @@ let make_state envstack memory firstloc = { envstack; memory; firstloc }
 
 (* dato un (ide -> value) -> value ->  *)
 let bind_env env x value = fun y -> if String.equal x y then value else env y
-let bind_mem mem nome_mem value = fun loc -> if Int.equal nome_mem loc then value else mem loc
-
+let bind_mem f x v y = if Int.equal x y then v else f y
 (* da utilizzare per il trace *)
 
 let bottom_env : env = fun x -> raise (UnboundVar x)
