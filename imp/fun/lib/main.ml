@@ -42,6 +42,37 @@ let eval_decl (state : state) (decl_list : decl list) : state =
             l + 1, (bind_env e nome_f (IFun (params, body, expr))) (* come facciamo sopra noi stiamo faciendo il bind tra il nome della funzione e tutti i suoi componenti *)
       ) (loc, env) decl_list in 
       make_state ((new_env :: getenv state)) (getmem state) new_loc
+
+(* Descrizione righe 37 -> 42 
+  data la dichiarazione-i gli associa una nuova locazione e con bind_env associa l'ide-i all'env che estende l'env precedente(estende inteso come prende le informazioni di quello precedente e aggiunge le nuove informazioni)
+
+  bind_env (env) (ide) (loc): 
+  Descrizione
+    è una funzione che dati
+    un environment (env), 
+    un identificatore (ide),
+    una locazione (loc),
+    restituisce un nuovo environment new_env che
+    estende env aggiungendo la nuova associazione tra ide e loc.
+  Implementazione:
+    se ide è in new_env, allora restituisce loc
+    altrimenti chiama env, a cui new_env è associato, e cerca 
+    in profondità. 
+  Esempio
+      bottom_env = fun x -> raise (UnboundVar x);;
+      e0 = bind_env (bottom_env) ("foo") (0);;
+      e1 = bind_env (bottom_env) ("bar") (1);;
+      e2 = bind_env (bottom_env) ("baz") (2);;
+
+      l'esecuzione di
+      e2 ("foo");; 
+
+    andrà a eseguire una serie di ricerche
+      sempre più interne, sino a trovare la locazione
+      oppure a lanciare un'eccezione:
+  ("baz",("bar",("foo",(raise UnboundVar x)))
+*)
+
 (* eval_decl: fine *)
 
 (* eval_expr: inizio *)
