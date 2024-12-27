@@ -39,7 +39,7 @@ let eval_decl (state : state) (decl_list : decl list) : state =
           | IntVar ide -> 
             l + 1, (bind_env e ide (IVar l)) (* mettendo l partiamo da 0 fino a lunghezza(decl_list) *)
           | Fun (nome_f, params, body, expr) -> 
-            l + 1, (bind_env e nome_f (IFun (params, body, expr))) (* come facciamo sopra noi stiamo faciendo il bind tra il nome della funzione e tutti i suoi componenti *)
+            l + 1, (bind_env e nome_f (IFun (params, body, expr))) (* come facciamo sopra noi stiamo facendo il bind tra il nome della funzione e tutti i suoi componenti *)
       ) (loc, env) decl_list in 
       make_state ((new_env :: getenv state)) (getmem state) new_loc
 
